@@ -238,16 +238,18 @@ abstract class AbstractRegenerateRewrites
             }
             $whereConditions = array_unique($whereConditions);
 
-            $this->_getResourceConnection()->getConnection()->beginTransaction();
-            try {
-                $this->_getResourceConnection()->getConnection()->delete(
-                    $this->_getMainTableName(),
-                    implode(' OR ', $whereConditions)
-                );
-                $this->_getResourceConnection()->getConnection()->commit();
+            foreach ($whereConditions as $condition) {
+                $this->_getResourceConnection()->getConnection()->beginTransaction();
+                try {
+                    $this->_getResourceConnection()->getConnection()->delete(
+                        $this->_getMainTableName(),
+                        $condition
+                    );
+                    $this->_getResourceConnection()->getConnection()->commit();
 
-            } catch (\Exception $e) {
-                $this->_getResourceConnection()->getConnection()->rollBack();
+                } catch (\Exception $e) {
+                    $this->_getResourceConnection()->getConnection()->rollBack();
+                }
             }
         }
 
