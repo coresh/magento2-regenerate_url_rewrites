@@ -370,7 +370,7 @@ abstract class AbstractRegenerateRewrites
             ->from($this->_getMainTableName(), ['url_rewrite_id'])
             ->where('entity_type = ?', $rewrite['entity_type'])
             ->where('request_path = ?', $rewrite['request_path'])
-            ->where('store_id = ?', $rewrite['store_id'])
+            // ->where('store_id = ?', $rewrite['store_id']) // Force a unique request_path for all stores
             ->where('entity_id != ?', $rewrite['entity_id']);
         return $this->_getResourceConnection()->getConnection()->fetchOne($select);
     }
