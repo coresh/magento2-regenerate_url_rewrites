@@ -200,28 +200,59 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
         }
 
         try {
-            $this->_getProductAction()->updateAttributes(
-                [$entity->getId()],
-                $updateAttributes,
-                $storeId
-            );
-
             $urlRewrites = $this->_getProductUrlRewriteGenerator()->generate($entity);
             $urlRewrites = $this->helper->sanitizeProductUrlRewrites($urlRewrites);
 
             if (!empty($urlRewrites)) {
-                $this->saveUrlRewrites(
+                $savedRewites = $this->saveUrlRewrites(
                     $urlRewrites,
                     [['entity_type' => $this->entityType, 'entity_id' => $entity->getId(), 'store_id' => $storeId]]
                 );
+
+                if (!$this->regenerateOptions['noRegenUrlKey'] && $savedRewites) {
+                    // Update Product url_key's with updated request_path
+                    $this->updateProductUrlKeys($savedRewites->getSavedUrlRewrites());
+                }
             }
         } catch (\Exception $e) {
+            sprintf("Error. processProduct:%s\n", $e->getMessage());
             // go to the next product
         }
 
         $this->progressBarProgress++;
 
         return $this;
+    }
+
+    /**
+     * @param array $savedRewites
+     */
+    protected function updateProductUrlKeys(array $savedRewites): void
+    {
+        foreach ($savedRewites as $savedRewrite) {
+            try {
+                $entityId         = $savedRewrite['entity_id'];
+                $storeId          = $savedRewrite['store_id'];
+                $productUrlSuffix = $this->helper->getProductUrlSuffix($storeId);
+
+                // Replace $productUrlSuffix from $savedRewrite['request_path']
+                // By default: Product URL must be written excluding $productUrlSuffix
+                $updateAttributes['url_key'] = preg_replace(
+                    sprintf('/%s$/', $productUrlSuffix),
+                    '',
+                    $savedRewrite['request_path']
+                );
+
+                $this->_getProductAction()->updateAttributes(
+                    [$entityId],
+                    $updateAttributes,
+                    $storeId
+                );
+            } catch (\Exception $e) {
+                echo sprintf("Error. updateProductUrlKeys: %s\n", $e->getMessage());
+                // go to the next product
+            }
+        }
     }
 
     /**

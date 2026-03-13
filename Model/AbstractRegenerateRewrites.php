@@ -10,6 +10,10 @@
 
 namespace OlegKoval\RegenerateUrlRewrites\Model;
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+
 use OlegKoval\RegenerateUrlRewrites\Helper\Regenerate as RegenerateHelper;
 use Magento\Framework\App\ResourceConnection;
 use Magento\UrlRewrite\Model\Storage\DbStorage;
@@ -68,6 +72,8 @@ abstract class AbstractRegenerateRewrites
      */
     protected $resourceConnection;
 
+    protected $savedUrlRewrites = [];
+
     /**
      * RegenerateAbstract constructor
      *
@@ -120,6 +126,9 @@ abstract class AbstractRegenerateRewrites
     {
         $data = $this->_prepareUrlRewrites($urlRewrites);
 
+        // print_r($data);
+        // exit();
+
         if (!$this->regenerateOptions['saveOldUrls']) {
             if (empty($entityData) && !empty($data)) {
                 $entityData = $data;
@@ -140,7 +149,14 @@ abstract class AbstractRegenerateRewrites
             $this->_getResourceConnection()->getConnection()->rollBack();
         }
 
+        $this->savedUrlRewrites = $data;
+
         return $this;
+    }
+
+    public function getSavedUrlRewrites(): array
+    {
+        return $this->savedUrlRewrites;
     }
 
     /**
@@ -344,9 +360,21 @@ abstract class AbstractRegenerateRewrites
             // re-set Url Rewrite with sanitized parts
             $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts, '', $urlSuffix);
 
+            // 1. Duplicates - init: Keep the request_path as 'constant' value: append the store code to the request_path
+            if ($this->_urlRewriteExists($rewrite)) {
+
+                try {
+                    $rewrite['request_path'] = $this->appendStoreCode($rewrite, $pathParts, $urlSuffix);
+                    $pathParts = pathinfo($rewrite['request_path']);
+                } catch (\Exception $e) {
+                    echo sprintf("\nError: %s\n", $e->getMessage());
+                }
+            }
+
+            // 2. Still duplicates? Append $index
+            $index = 0;
             // check if we have a duplicate (maybe exists product with the same name => same Url Rewrite)
             // if exists then add additional index to avoid a duplicates
-            $index = 0;
             while ($this->_urlRewriteExists($rewrite)) {
                 $index++;
                 $rewrite['request_path'] = $this->_mergePartsIntoRewriteRequest($pathParts, (string)$index, $urlSuffix);
@@ -366,13 +394,16 @@ abstract class AbstractRegenerateRewrites
      */
     protected function _urlRewriteExists(array $rewrite): string
     {
+        // ->where('store_id = ?', $rewrite['store_id']) // commented this line: unique request_path's for all stores
         $select = $this->_getResourceConnection()->getConnection()->select()
             ->from($this->_getMainTableName(), ['url_rewrite_id'])
             ->where('entity_type = ?', $rewrite['entity_type'])
             ->where('request_path = ?', $rewrite['request_path'])
-            // ->where('store_id = ?', $rewrite['store_id']) // Force a unique request_path for all stores
-            ->where('entity_id != ?', $rewrite['entity_id']);
-        return $this->_getResourceConnection()->getConnection()->fetchOne($select);
+            ->where('entity_id = ?', $rewrite['entity_id'])
+            ->limit(1);
+        $result = $this->_getResourceConnection()->getConnection()->fetchOne($select);
+
+        return $result;
     }
 
     /**
@@ -413,5 +444,37 @@ abstract class AbstractRegenerateRewrites
         }
 
         return $this->storeRootCategoryId[$storeId];
+    }
+
+
+    /**
+     * Add store code to the 'request_path'
+     *
+     * @return string
+     */
+    protected function appendStoreCode(array $rewrite, array $pathParts, string $urlSuffix): string
+    {
+        $storeCode   = $this->helper->getStoreManager()->getStore($rewrite['store_id'])->getCode();
+        $storeCode   = str_replace('_', '-', $storeCode);
+        $storeId     = $rewrite['store_id'];
+        $requestPath = $rewrite['request_path'];
+
+        $suffix = $rewrite['entity_type'] === 'product'
+        ? $this->helper->getProductUrlSuffix($storeId)
+        : $this->helper->getCategoryUrlSuffix($storeId);
+
+        // Result: -store-code.html | -store-code
+        $storeSuffix = sprintf('-%s%s', $storeCode, $suffix);
+        $regexp      = sprintf('/%s$/', $storeSuffix);
+
+        if (preg_match($regexp, $requestPath)) {
+            // Store suffix already exists
+            sprintf("\nStore suffix already exists: %s\n", $requestPath);
+            return $requestPath;
+        }
+
+        $requestPath = $this->_mergePartsIntoRewriteRequest($pathParts, $storeCode, $urlSuffix);
+
+        return $requestPath;
     }
 }
