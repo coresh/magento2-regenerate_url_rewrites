@@ -236,28 +236,23 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
                 continue;
             }
 
-            try {
-                $entityId         = $savedRewrite['entity_id'];
-                $storeId          = $savedRewrite['store_id'];
-                $productUrlSuffix = $this->helper->getProductUrlSuffix($storeId);
+            $entityId         = $savedRewrite['entity_id'];
+            $storeId          = $savedRewrite['store_id'];
+            $productUrlSuffix = $this->helper->getProductUrlSuffix($storeId);
 
-                // Replace $productUrlSuffix from $savedRewrite['request_path']
-                // By default: Product URL must be written excluding $productUrlSuffix
-                $updateAttributes['url_key'] = preg_replace(
-                    sprintf('/%s$/', $productUrlSuffix),
-                    '',
-                    $savedRewrite['request_path']
-                );
+            // Replace $productUrlSuffix from $savedRewrite['request_path']
+            // By default: Product URL must be written excluding $productUrlSuffix
+            $updateAttributes['url_key'] = preg_replace(
+                sprintf('/%s$/', $productUrlSuffix),
+                '',
+                $savedRewrite['request_path']
+            );
 
-                $this->_getProductAction()->updateAttributes(
-                    [$entityId],
-                    $updateAttributes,
-                    $storeId
-                );
-            } catch (\Exception $e) {
-                echo sprintf("Error. updateProductUrlKeys: %s\n", $e->getMessage());
-                // go to the next product
-            }
+            $this->_getProductAction()->updateAttributes(
+                [$entityId],
+                $updateAttributes,
+                $storeId
+            );
         }
     }
 

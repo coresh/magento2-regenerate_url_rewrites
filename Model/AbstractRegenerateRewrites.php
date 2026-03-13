@@ -121,9 +121,13 @@ abstract class AbstractRegenerateRewrites
     public function saveUrlRewrites(array $urlRewrites, array $entityData = []): static
     {
         $data = $this->_prepareUrlRewrites($urlRewrites);
+        $this->savedUrlRewrites = $data;
 
-        // print_r($data);
-        // exit();
+        // remove original_request_path from data
+        $data = array_map(function($item) {
+            unset($item['original_request_path']);
+            return $item;
+        }, $data);
 
         if (!$this->regenerateOptions['saveOldUrls']) {
             if (empty($entityData) && !empty($data)) {
@@ -145,7 +149,6 @@ abstract class AbstractRegenerateRewrites
             $this->_getResourceConnection()->getConnection()->rollBack();
         }
 
-        $this->savedUrlRewrites = $data;
 
         return $this;
     }
@@ -364,7 +367,7 @@ abstract class AbstractRegenerateRewrites
                 try {
                     $rewrite['request_path'] = $this->appendStoreCode($rewrite, $pathParts, $urlSuffix);
                     $pathParts = pathinfo($rewrite['request_path']);
-                    echo sprintf("\nrewrite: %s\n", print_r($rewrite));
+                    // echo sprintf("\nrewrite: %s\n", print_r($rewrite));
                 } catch (\Exception $e) {
                     echo sprintf("\nError: %s\n", $e->getMessage());
                 }
