@@ -343,6 +343,8 @@ abstract class AbstractRegenerateRewrites
             // maybe someone did import product programmatically and product(s) name(s) are empty
             if (empty($originalRequestPath)) continue;
 
+            $rewrite['original_request_path'] = $originalRequestPath;
+
             // split generated Url Rewrite into parts
             $pathParts = pathinfo($originalRequestPath);
 
@@ -362,6 +364,7 @@ abstract class AbstractRegenerateRewrites
                 try {
                     $rewrite['request_path'] = $this->appendStoreCode($rewrite, $pathParts, $urlSuffix);
                     $pathParts = pathinfo($rewrite['request_path']);
+                    echo sprintf("\nrewrite: %s\n", print_r($rewrite));
                 } catch (\Exception $e) {
                     echo sprintf("\nError: %s\n", $e->getMessage());
                 }

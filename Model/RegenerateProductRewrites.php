@@ -230,6 +230,12 @@ class RegenerateProductRewrites extends AbstractRegenerateRewrites
     protected function updateProductUrlKeys(array $savedRewites): void
     {
         foreach ($savedRewites as $savedRewrite) {
+
+            // Skip unchanged url_key
+            if ($savedRewrite['original_request_path'] === $savedRewrite['request_path']) {
+                continue;
+            }
+
             try {
                 $entityId         = $savedRewrite['entity_id'];
                 $storeId          = $savedRewrite['store_id'];
