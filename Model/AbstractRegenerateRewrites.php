@@ -396,12 +396,12 @@ abstract class AbstractRegenerateRewrites
      */
     protected function _urlRewriteExists(array $rewrite): string
     {
-        // ->where('store_id = ?', $rewrite['store_id']) // commented this line: unique request_path's for all stores
+        // ->where('store_id = ?', $rewrite['store_id']) // removed this line: unique request_path's for all stores
+        // ->where('entity_type = ?', $rewrite['entity_type']) // removed this line: unique request_path's for all stores
+        // ->where('entity_id = ?', $rewrite['entity_id']) // removed this line: unique request_path's for all entity id's
         $select = $this->_getResourceConnection()->getConnection()->select()
             ->from($this->_getMainTableName(), ['url_rewrite_id'])
-            ->where('entity_type = ?', $rewrite['entity_type'])
             ->where('request_path = ?', $rewrite['request_path'])
-            ->where('entity_id = ?', $rewrite['entity_id'])
             ->limit(1);
         $result = $this->_getResourceConnection()->getConnection()->fetchOne($select);
 
