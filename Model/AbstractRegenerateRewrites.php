@@ -401,6 +401,7 @@ abstract class AbstractRegenerateRewrites
         // ->where('entity_id = ?', $rewrite['entity_id']) // removed this line: unique request_path's for all entity id's
         $select = $this->_getResourceConnection()->getConnection()->select()
             ->from($this->_getMainTableName(), ['url_rewrite_id'])
+            ->where('store_id = ?', $rewrite['store_id'])
             ->where('request_path = ?', $rewrite['request_path'])
             ->limit(1);
         $result = $this->_getResourceConnection()->getConnection()->fetchOne($select);
